@@ -1,0 +1,46 @@
+# by leo 2025.11.01
+DOMAIN-KEYWORD,toutiao
+DOMAIN-KEYWORD,douyin
+DOMAIN-SUFFIX,amemv.com
+DOMAIN-SUFFIX,bdurl.net
+DOMAIN-SUFFIX,huoshan.com
+DOMAIN-SUFFIX,huoshanstatic.com
+DOMAIN-SUFFIX,huoshanzhibo.com
+DOMAIN-SUFFIX,ixigua.com
+DOMAIN-SUFFIX,ixiguavideo.com
+DOMAIN-SUFFIX,ixgvideo.com
+DOMAIN-SUFFIX,bdxiguaimg.com
+DOMAIN-SUFFIX,pstatp.com
+DOMAIN-SUFFIX,snssdk.com
+DOMAIN-SUFFIX,zijieapi.com
+DOMAIN-SUFFIX,zijiecdn.com
+DOMAIN-SUFFIX,zijiecdn.net
+DOMAIN-SUFFIX,zjbyte.cn
+DOMAIN-SUFFIX,zjcdn.com
+DOMAIN-SUFFIX,bytedance.com
+DOMAIN-SUFFIX,bytedance.net
+DOMAIN-SUFFIX,bytegecko.com
+DOMAIN-SUFFIX,bytedns.net
+DOMAIN-SUFFIX,byteimg.com
+DOMAIN-SUFFIX,feiliao.com
+DOMAIN-SUFFIX,gifshow.com
+DOMAIN-SUFFIX,huoshan.com
+DOMAIN-SUFFIX,iesdouyin.com
+DOMAIN-SUFFIX,ixigua.com
+DOMAIN-SUFFIX,kspkg.com
+DOMAIN-SUFFIX,pstatp.com
+DOMAIN-SUFFIX,snssdk.com
+DOMAIN-SUFFIX,wukong.com
+DOMAIN-SUFFIX,zijieimg.com
+DOMAIN-SUFFIX,zjbyte.com
+DOMAIN-SUFFIX,zjcdn.com
+IP-CIDR, 183.226.54.181/32,no-resolve
+IP-CIDR, 36.133.202.140/32,no-resolve
+IP-CIDR, 117.176.156.45/32,no-resolve
+IP-CIDR, 220.243.141.73/32,no-resolve
+IP-CIDR, 163.181.35.180/32,no-resolve
+IP-CIDR, 111.225.147.191/32,no-resolve
+IP-CIDR, 110.249.199.75/32,no-resolve
+IP-CIDR, 101.126.58.201/32,no-resolve
+IP-CIDR, 8.134.241.67/32,no-resolve 
+

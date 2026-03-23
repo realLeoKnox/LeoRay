@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xray Controller</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);
+            --glass: rgba(255,255,255,0.05);
+            --border: rgba(255,255,255,0.1);
+            --text: #f8fafc; --muted: #94a3b8;
+            --accent: #8b5cf6; --accent2: #ec4899;
+            --green: #34d399; --red: #f87171; --yellow: #fbbf24;
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
+        .wrap{width:100%;max-width:960px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:24px;padding:36px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)}
+        h1{font-size:2.2rem;font-weight:700;background:linear-gradient(to right,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.02em;text-align:center;margin-bottom:28px}
+        /* Tabs */
+        .tabs{display:flex;gap:8px;margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:10px;flex-wrap:wrap}
+        .tab{padding:9px 18px;cursor:pointer;border-radius:10px;font-weight:600;color:var(--muted);transition:.2s;font-size:.9rem}
+        .tab.active{color:#fff;background:rgba(139,92,246,.3);border:1px solid rgba(139,92,246,.5)}
+        .tab:hover:not(.active){background:rgba(255,255,255,.05);color:#fff}
+        .view{display:none}.view.active{display:block;animation:fade .35s ease-out}
+        @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        /* Buttons */
+        .btn{padding:10px 18px;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit;font-size:.9rem}
+        .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 8px 20px -5px rgba(139,92,246,.4)}
+        .btn-primary:hover{transform:translateY(-2px);filter:brightness(1.1)}
+        .btn-ghost{background:rgba(255,255,255,.08);border:1px solid var(--border);color:#fff}
+        .btn-ghost:hover{background:rgba(255,255,255,.15)}
+        .btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+        .btn-danger:hover{background:rgba(239,68,68,.25)}
+        .btn-sm{padding:6px 12px;font-size:.8rem;border-radius:8px}
+        .btn-full{display:block;width:100%;padding:15px;font-size:1rem;border-radius:14px;margin-top:20px}
+        /* Forms */
+        .field{margin-bottom:16px}
+        label{display:block;margin-bottom:6px;font-size:.85rem;font-weight:600;color:var(--muted)}
+        input[type=text],input[type=url],select,textarea{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--border);color:#fff;padding:10px 14px;border-radius:10px;font-family:inherit;font-size:.9rem;outline:none;transition:.2s}
+        input[type=text]:focus,input[type=url]:focus,select:focus,textarea:focus{border-color:var(--accent)}
+        select option{background:#1e293b}
+        textarea{resize:vertical;min-height:90px}
+        /* Cards / rows */
+        .card{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px 20px;margin-bottom:10px}
+        .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .row .grow{flex:1;min-width:120px}
+        .section-title{font-size:1.05rem;font-weight:700;margin:24px 0 12px;display:flex;justify-content:space-between;align-items:center}
+        .section-title:first-child{margin-top:0}
+        /* Toggle */
+        .toggle-row{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px 20px;margin-bottom:10px}
+        .toggle-switch{position:relative;display:inline-block;width:46px;height:26px}
+        .toggle-switch input{opacity:0;width:0;height:0}
+        .slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.18);transition:.3s;border-radius:26px}
+        .slider:before{position:absolute;content:"";height:18px;width:18px;left:4px;bottom:4px;background:#fff;transition:.3s;border-radius:50%}
+        input:checked+.slider{background:var(--accent)}
+        input:checked+.slider:before{transform:translateX(20px)}
+        /* Badge */
+        .badge{padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+        .badge-on{background:rgba(16,185,129,.2);color:var(--green)}
+        .badge-off{background:rgba(239,68,68,.2);color:var(--red)}
+        /* Logs */
+        .logs-box{background:#0d1117;border-radius:12px;padding:16px;height:340px;overflow-y:auto;font-family:monospace;font-size:.82rem;color:#a7f3d0;border:1px solid var(--border)}
+        /* Node */
+        .node-item{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .node-title{font-weight:600;color:#e2e8f0;margin-bottom:3px}
+        .node-desc{font-size:.8rem;color:var(--muted)}
+        .lat{font-family:monospace;font-size:.8rem;background:rgba(0,0,0,.3);padding:4px 8px;border-radius:6px}
+        /* Modal */
+        #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;backdrop-filter:blur(4px)}
+        .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a2035;padding:28px;border-radius:18px;border:1px solid var(--border);z-index:100;width:90%;max-width:480px;box-shadow:0 25px 50px -12px rgba(0,0,0,.6)}
+        .modal h3{margin-bottom:18px;font-size:1.1rem}
+        .modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+        /* Toast */
+        .toast{position:fixed;bottom:24px;right:24px;background:#10b981;color:#fff;padding:13px 20px;border-radius:10px;font-weight:500;opacity:0;transform:translateY(16px);transition:.3s;pointer-events:none;z-index:999}
+        .toast.show{opacity:1;transform:translateY(0)}
+        .tag-pill{font-size:.75rem;padding:2px 8px;border-radius:12px;background:rgba(139,92,246,.2);color:#c4b5fd;border:1px solid rgba(139,92,246,.3)}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Xray Controller</h1>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('policy')" id="tab-policy">📋 Policy</div>
+        <div class="tab" onclick="switchTab('nodes')" id="tab-nodes">📡 Nodes</div>
+        <div class="tab" onclick="switchTab('dashboard')" id="tab-dashboard">📊 Dashboard</div>
+        <div class="tab" onclick="switchTab('import')" id="tab-import">📥 Import</div>
+        <div class="tab" onclick="switchTab('settings')" id="tab-settings" style="color:#fbbf24">⚙️ Settings</div>
+    </div>
+
+    <!-- ═══ POLICY TAB ═══ -->
+    <div id="view-policy" class="view active">
+
+        <!-- Proxy Groups -->
+        <div class="section-title">
+            <span>🏷️ Proxy Groups</span>
+            <button class="btn btn-ghost btn-sm" onclick="openGroupModal()">+ Add Group</button>
+        </div>
+        <div id="groupList"></div>
+
+        <!-- Rule Sets -->
+        <div class="section-title">
+            <span>📦 Rule Sets</span>
+            <button class="btn btn-ghost btn-sm" onclick="openRuleSetModal()">+ Add Rule Set</button>
+        </div>
+        <div id="ruleSetList"></div>
+
+        <!-- Inline Rules -->
+        <div class="section-title">
+            <span>✏️ Inline Rules</span>
+            <button class="btn btn-ghost btn-sm" onclick="openInlineRuleModal()">+ Add Rule</button>
+        </div>
+        <div id="inlineRuleList"></div>
+
+        <!-- Final -->
+        <div class="section-title" style="margin-top:28px">
+            <span>🌐 Final (catch-all)</span>
+        </div>
+        <div class="card row">
+            <span style="white-space:nowrap;color:var(--muted);font-size:.9rem">Default policy →</span>
+            <select class="grow" id="finalSelect"></select>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="savePolicy()">💾 Save &amp; Restart Xray</button>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="refreshRules()">🔄 Refresh Remote Rules &amp; Restart</button>
+    </div>
+
+    <!-- ═══ NODES TAB ═══ -->
+    <div id="view-nodes" class="view">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3>📡 Outbound Nodes</h3>
+            <button class="btn btn-ghost btn-sm" onclick="fetchNodes()">Refresh</button>
+        </div>
+        <div id="nodeList"></div>
+        <!-- Edit node modal trigger embedded in renderNodes() -->
+    </div>
+
+    <!-- ═══ DASHBOARD TAB ═══ -->
+    <div id="view-dashboard" class="view">
+        <div class="card row" style="margin-bottom:16px">
+            <div id="statusBadge" class="badge badge-off">Checking...</div>
+            <div>PID: <strong id="statusPid">-</strong></div>
+            <div>Uptime: <strong id="statusUptime">-</strong></div>
+            <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="fetchStatus()">Refresh</button>
+        </div>
+        <div class="logs-box" id="logsBox">Connecting...</div>
+    </div>
+
+    <!-- ═══ IMPORT TAB ═══ -->
+    <div id="view-import" class="view">
+        <h3 style="margin-bottom:16px">🔌 Import Subscription</h3>
+        <div class="field"><label>Subscription URL</label><input type="url" id="subUrl" placeholder="https://.../subscribe"></div>
+        <div class="field"><label>Or Paste Raw Content</label><textarea id="subContent" placeholder="vmess://..."></textarea></div>
+        <button class="btn btn-ghost" onclick="importSub()">Update Subscription</button>
+    </div>
+
+    <!-- ═══ SETTINGS TAB ═══ -->
+    <div id="view-settings" class="view">
+        <h3 style="margin-bottom:20px">⚙️ System Settings</h3>
+        <div class="toggle-row">
+            <div><div style="font-weight:600">🌐 Allow LAN (局域网共享)</div><div style="font-size:.8rem;color:var(--muted);margin-top:3px">监听 0.0.0.0 开放局域网访问</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="allowLanToggle"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+            <div><div style="font-weight:600">🛡️ TUN 模式 <span style="color:var(--yellow);font-size:.8rem">(需 sudo)</span></div><div style="font-size:.8rem;color:var(--muted);margin-top:3px">创建虚拟网卡接管全局流量</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="tunToggle" onchange="tunWarning(this)"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+            <div><div style="font-weight:600">🕵️ Traffic Sniffing (流量嗅探)</div><div style="font-size:.8rem;color:var(--muted);margin-top:3px">从握手包提取真实域名以精准路由</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="sniffToggle"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+            <div><div style="font-weight:600">🛑 FakeIP &amp; DNS Hijack</div><div style="font-size:.8rem;color:var(--muted);margin-top:3px">全局 DNS 劫持 + FakeIP，防止 IP 直连绕过规则</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="fakeipToggle"><span class="slider"></span></label>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveSettings()">💾 Save &amp; Restart Xray</button>
+    </div>
+</div><!-- /wrap -->
+
+<!-- Modals -->
+<div id="overlay" onclick="closeModal()"></div>
+
+<!-- Add Group Modal -->
+<div class="modal" id="groupModal">
+    <h3>Add / Edit Proxy Group</h3>
+    <div class="field"><label>Group Name</label><input type="text" id="gName" placeholder="e.g. 流媒体"></div>
+    <div class="field"><label>Default Node</label><select id="gNode"></select></div>
+    <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveGroup()">Save</button>
+    </div>
+</div>
+
+<!-- Add Rule Set Modal -->
+<div class="modal" id="ruleSetModal">
+    <h3>Add Rule Set</h3>
+    <div class="field"><label>Tag / Display Name</label><input type="text" id="rsTag" placeholder="e.g. AI Services"></div>
+    <div class="field"><label>Remote URL (optional)</label><input type="url" id="rsUrl" placeholder="https://raw.githubusercontent.com/.../AI.list" oninput="guessLocal(this)"></div>
+    <div class="field"><label>Local Fallback Path</label><input type="text" id="rsLocal" placeholder="rule/AI.list"></div>
+    <div class="field"><label>Policy</label><select id="rsPolicy"></select></div>
+    <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveRuleSet()">Add</button>
+    </div>
+</div>
+
+<!-- Add Inline Rule Modal -->
+<div class="modal" id="inlineModal">
+    <h3>Add Inline Rule</h3>
+    <div class="field"><label>Type</label>
+        <select id="irType">
+            <option>DOMAIN</option><option>DOMAIN-SUFFIX</option><option selected>DOMAIN-KEYWORD</option>
+            <option>IP-CIDR</option><option>IP-CIDR6</option><option>DST-PORT</option>
+        </select>
+    </div>
+    <div class="field"><label>Payload</label><input type="text" id="irPayload" placeholder="e.g. openai"></div>
+    <div class="field"><label>Policy</label><select id="irPolicy"></select></div>
+    <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveInlineRule()">Add</button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let policy = { groups:[], rule_sets:[], inline_rules:[], final:"direct", allow_lan:false, enable_tun:false, enable_fakeip:false, enable_sniff:false };
+let allNodes = [];   // outbound node tags
+let fullNodesData = [];
+let editingGroupIdx = -1;
+let logInterval = null;
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(id) {
+    document.querySelectorAll('.tab,.view').forEach(el=>el.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active');
+    document.getElementById('view-'+id).classList.add('active');
+    clearInterval(logInterval); logInterval=null;
+    if(id==='policy') loadPolicy();
+    else if(id==='nodes') fetchNodes();
+    else if(id==='dashboard') { fetchStatus(); logInterval=setInterval(fetchLogs,2000); fetchLogs(); }
+    else if(id==='settings') loadSettings();
+}
+
+// ── Policy helpers ────────────────────────────────────────────────────────────
+function allPolicies() {
+    const names = policy.groups.map(g=>g.name);
+    return [...names, 'direct', 'block'];
+}
+function policyOptions(sel, current) {
+    sel.innerHTML = allPolicies().map(n=>`<option value="${n}" ${n===current?'selected':''}>${n}</option>`).join('');
+}
+function nodeOptions(sel, current) {
+    sel.innerHTML = ['', ...allNodes].map(n=>`<option value="${n}" ${n===current?'selected':''}>${n||'— (use default)'}</option>`).join('');
+}
+
+// ── Load Policy ───────────────────────────────────────────────────────────────
+async function loadPolicy() {
+    const r = await fetch('/api/policy'); policy = await r.json();
+    // also load available nodes
+    const nr = await fetch('/api/nodes'); fullNodesData = await nr.json();
+    allNodes = fullNodesData.map(n=>n.tag).concat(['direct','block']);
+    renderGroups(); renderRuleSets(); renderInlineRules(); renderFinal();
+    loadSettings();
+}
+
+// ── Proxy Groups ──────────────────────────────────────────────────────────────
+function renderGroups() {
+    const el = document.getElementById('groupList');
+    if(!policy.groups.length){ el.innerHTML='<div style="color:var(--muted);font-size:.9rem;padding:8px 0">No groups yet. Add one!</div>'; return; }
+    el.innerHTML = policy.groups.map((g,i)=>`
+      <div class="card row">
+        <span class="grow" style="font-weight:600">${g.name}</span>
+        <select onchange="policy.groups[${i}].node=this.value" style="width:200px">
+          ${allNodes.map(n=>`<option value="${n}" ${n===g.node?'selected':''}>${n||'(default)'}</option>`).join('')}
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="removeGroup(${i})">✕</button>
+      </div>`).join('');
+}
+function openGroupModal() {
+    editingGroupIdx=-1;
+    document.getElementById('gName').value='';
+    nodeOptions(document.getElementById('gNode'),'');
+    showModal('groupModal');
+}
+function saveGroup() {
+    const name=document.getElementById('gName').value.trim();
+    const node=document.getElementById('gNode').value;
+    if(!name){ alert('Group name required'); return; }
+    if(editingGroupIdx>=0) policy.groups[editingGroupIdx]={name,node};
+    else policy.groups.push({name,node});
+    closeModal(); renderGroups(); renderFinal();
+}
+function removeGroup(i){ policy.groups.splice(i,1); renderGroups(); renderFinal(); }
+
+// ── Rule Sets ─────────────────────────────────────────────────────────────────
+function renderRuleSets() {
+    const el = document.getElementById('ruleSetList');
+    if(!policy.rule_sets.length){ el.innerHTML='<div style="color:var(--muted);font-size:.9rem;padding:8px 0">No rule sets. Add one!</div>'; return; }
+    el.innerHTML = policy.rule_sets.map((rs,i)=>`
+      <div class="card">
+        <div class="row" style="margin-bottom:6px">
+          <span class="tag-pill">${escHtml(rs.tag)}</span>
+          <span style="color:var(--muted);font-size:.85rem;flex:1">${escHtml(rs.policy)}</span>
+          <label class="toggle-switch" style="width:40px;height:22px" title="Enabled">
+            <input type="checkbox" ${rs.enabled?'checked':''} onchange="policy.rule_sets[${i}].enabled=this.checked">
+            <span class="slider"></span>
+          </label>
+          <select onchange="policy.rule_sets[${i}].policy=this.value" style="width:160px">
+            ${allPolicies().map(p=>`<option value="${p}" ${p===rs.policy?'selected':''}>${p}</option>`).join('')}
+          </select>
+          <button class="btn btn-danger btn-sm" onclick="removeRuleSet(${i})">✕</button>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted)">${rs.url?'🌐 '+escHtml(rs.url):''}${rs.local?' | 📁 '+escHtml(rs.local):''}</div>
+      </div>`).join('');
+}
+function openRuleSetModal() {
+    ['rsTag','rsUrl','rsLocal'].forEach(id=>document.getElementById(id).value='');
+    policyOptions(document.getElementById('rsPolicy'), policy.final||'direct');
+    showModal('ruleSetModal');
+}
+function guessLocal(inp){
+    const url=inp.value.trim();
+    if(!url) return;
+    try{ const base=new URL(url).pathname.split('/').pop(); document.getElementById('rsLocal').value='rule/'+base; }catch(e){}
+}
+function saveRuleSet(){
+    const tag=document.getElementById('rsTag').value.trim();
+    const url=document.getElementById('rsUrl').value.trim();
+    const local=document.getElementById('rsLocal').value.trim();
+    const pol=document.getElementById('rsPolicy').value;
+    if(!tag&&!url&&!local){ alert('Provide at least a tag and URL or local path'); return; }
+    policy.rule_sets.push({tag:tag||local.split('/').pop(), policy:pol, enabled:true, url, local});
+    closeModal(); renderRuleSets();
+}
+function removeRuleSet(i){ policy.rule_sets.splice(i,1); renderRuleSets(); }
+
+// ── Inline Rules ──────────────────────────────────────────────────────────────
+function renderInlineRules(){
+    const el=document.getElementById('inlineRuleList');
+    if(!policy.inline_rules.length){ el.innerHTML='<div style="color:var(--muted);font-size:.9rem;padding:8px 0">No inline rules.</div>'; return; }
+    el.innerHTML=policy.inline_rules.map((r,i)=>`
+      <div class="card row">
+        <span class="tag-pill">${escHtml(r.type)}</span>
+        <span class="grow" style="font-family:monospace;font-size:.85rem">${escHtml(r.payload)}</span>
+        <select onchange="policy.inline_rules[${i}].policy=this.value" style="width:150px">
+          ${allPolicies().map(p=>`<option value="${p}" ${p===r.policy?'selected':''}>${p}</option>`).join('')}
+        </select>
+        <button class="btn btn-danger btn-sm" onclick="removeInlineRule(${i})">✕</button>
+      </div>`).join('');
+}
+function openInlineRuleModal(){
+    document.getElementById('irPayload').value='';
+    policyOptions(document.getElementById('irPolicy'),'direct');
+    showModal('inlineModal');
+}
+function saveInlineRule(){
+    const type=document.getElementById('irType').value;
+    const payload=document.getElementById('irPayload').value.trim();
+    const pol=document.getElementById('irPolicy').value;
+    if(!payload){ alert('Payload required'); return; }
+    policy.inline_rules.push({type,payload,policy:pol});
+    closeModal(); renderInlineRules();
+}
+function removeInlineRule(i){ policy.inline_rules.splice(i,1); renderInlineRules(); }
+
+// ── Final ─────────────────────────────────────────────────────────────────────
+function renderFinal(){
+    const sel=document.getElementById('finalSelect');
+    policyOptions(sel, policy.final||'direct');
+}
+
+// ── Save Policy ───────────────────────────────────────────────────────────────
+async function savePolicy(){
+    policy.final=document.getElementById('finalSelect').value;
+    // sync settings from Settings tab toggles
+    policy.allow_lan=document.getElementById('allowLanToggle').checked;
+    policy.enable_tun=document.getElementById('tunToggle').checked;
+    policy.enable_sniff=document.getElementById('sniffToggle').checked;
+    policy.enable_fakeip=document.getElementById('fakeipToggle').checked;
+    const r=await fetch('/api/policy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(policy)});
+    if(r.ok) showToast('✅ Saved & Restarting Xray');
+    else showToast('❌ Save failed: '+(await r.text()), true);
+}
+
+async function refreshRules(){
+    const r=await fetch('/api/policy/refresh',{method:'POST'});
+    if(r.ok) showToast('🔄 Rules refreshed & Xray restarting');
+    else showToast('❌ Refresh failed', true);
+}
+
+// ── Settings tab ──────────────────────────────────────────────────────────────
+function loadSettings(){
+    document.getElementById('allowLanToggle').checked = !!policy.allow_lan;
+    document.getElementById('tunToggle').checked = !!policy.enable_tun;
+    document.getElementById('sniffToggle').checked = !!policy.enable_sniff;
+    document.getElementById('fakeipToggle').checked = !!policy.enable_fakeip;
+}
+function tunWarning(el){
+    if(el.checked) alert('⚠️ TUN 需要 Root 权限！\n请确保使用 sudo ./xrayWebController 启动。');
+}
+async function saveSettings(){
+    policy.allow_lan=document.getElementById('allowLanToggle').checked;
+    policy.enable_tun=document.getElementById('tunToggle').checked;
+    policy.enable_sniff=document.getElementById('sniffToggle').checked;
+    policy.enable_fakeip=document.getElementById('fakeipToggle').checked;
+    await savePolicy();
+}
+
+// ── Nodes tab ─────────────────────────────────────────────────────────────────
+async function fetchNodes(){
+    const r=await fetch('/api/nodes'); fullNodesData=await r.json();
+    const el=document.getElementById('nodeList');
+    el.innerHTML=fullNodesData.map((n,i)=>{
+        const net=n.streamSettings?.network||'tcp';
+        const sec=n.streamSettings?.security||'none';
+        return `<div class="node-item">
+          <div><div class="node-title">${escHtml(n.tag)}</div><div class="node-desc">${n.protocol.toUpperCase()} | ${net} | ${sec}</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="lat" id="lat-${i}" style="display:none"></span>
+            <button class="btn btn-ghost btn-sm" onclick="testNode(${i})">⚡ Test</button>
+          </div>
+        </div>`;
+    }).join('');
+}
+async function testNode(i){
+    const lat=document.getElementById('lat-'+i);
+    lat.style.display='block'; lat.textContent='Testing…';
+    const r=await fetch('/api/test_node',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:i})});
+    const d=await r.json();
+    if(d.error) lat.innerHTML=`<span style="color:var(--red)">${escHtml(d.error)}</span>`;
+    else lat.innerHTML=`<span style="color:#a78bfa">TCP ${escHtml(d.tcp_ping)}</span> | <span style="color:var(--green)">HTTP ${escHtml(d.connect)}</span>`;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function fetchStatus(){
+    const r=await fetch('/api/status'); const s=await r.json();
+    const badge=document.getElementById('statusBadge');
+    badge.className='badge '+(s.running?'badge-on':'badge-off');
+    badge.textContent=s.running?'Running':'Stopped';
+    document.getElementById('statusPid').textContent=s.pid||'-';
+    document.getElementById('statusUptime').textContent=s.uptime||'-';
+}
+async function fetchLogs(){
+    const r=await fetch('/api/logs'); const d=await r.json();
+    const box=document.getElementById('logsBox');
+    const bottom=box.scrollHeight-box.clientHeight<=box.scrollTop+15;
+    const lines=(d.logs||[]).map(l=>escHtml(l)).join('<br>');
+    box.innerHTML=lines;
+    if(bottom) box.scrollTop=box.scrollHeight;
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+async function importSub(){
+    const url=document.getElementById('subUrl').value, content=document.getElementById('subContent').value;
+    if(!url&&!content){ alert('Provide a URL or paste content'); return; }
+    const r=await fetch('/api/sub',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,content})});
+    if(r.ok) showToast('✅ Subscription updated');
+    else showToast('❌ Import failed');
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function showModal(id){
+    document.getElementById('overlay').style.display='block';
+    document.getElementById(id).style.display='block';
+}
+function closeModal(){
+    document.getElementById('overlay').style.display='none';
+    document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, err=false){
+    const t=document.getElementById('toast');
+    t.textContent=msg;
+    t.style.background=err?'#ef4444':'#10b981';
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function escHtml(str){ const d=document.createElement('div'); d.textContent=String(str||''); return d.innerHTML; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadPolicy();
+</script>
+</body>
+</html>

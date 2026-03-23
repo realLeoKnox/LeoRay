@@ -1,0 +1,28 @@
+{
+  "mapping": {
+    "AI": "🇯🇵 日本 KDDI IX",
+    "Apple": "direct",
+    "DIRECT": "direct",
+    "Direct-Group": "direct",
+    "Epic": "🇸🇬 新加坡 DigitalOcean",
+    "Google": "🇺🇸 美国 RN DC3 ",
+    "Microsoft": "🇩🇪 德国 DigitalOcean",
+    "Netflix": "🇭🇰 香港 Hytron IX",
+    "PayPal": "🇸🇬 新加坡 Rabisu",
+    "REJECT": "block",
+    "Reject": "block",
+    "Spotify": "🇸🇬 新加坡 DigitalOcean",
+    "Steam": "🇸🇬 新加坡 DigitalOcean",
+    "T-Mobile": "🇺🇸 美国 LANGYA",
+    "Telegram": "🇭🇰 香港 HKT IX",
+    "TikTok": "🇭🇰 香港 HKT IX",
+    "手动选择": "🇭🇰 香港 KHAN IX",
+    "抖音": "🇭🇰 香港 Alice Network IX",
+    "规则外代理": "🇸🇬 新加坡 DigitalOcean",
+    "调试测试": "🇸🇬 新加坡 DigitalOcean"
+  },
+  "allow_lan": false,
+  "enable_tun": true,
+  "enable_fakeip": true,
+  "enable_sniff": true
+}
