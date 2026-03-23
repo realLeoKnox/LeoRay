@@ -10,6 +10,15 @@ LeoRay 是一款专为 macOS 设计的现代化 Xray 代理客户端。它原生
 - **无缝节点与规则管理**：开箱即用的订阅同步与策略分流支持。直观地呈现后台运行状态与日志，快速执行节点测速，并自由在不同出口节点间切换。
 - **一键授权免繁琐 (Sudoers)**：首次发起底层的网卡挂载请求（例如创建本地 TUN 路由表、挂载虚拟网卡）时会完成系统底层的 `sudoers` 安全授权，在此之后畅享顺滑启动，不产生任何恼人的授权弹窗。
 
+## 部分UI页面
+### dashboard
+![dashboard](img/dashboard.png)
+### policy
+![policy](img/policy.png)
+### logs
+![logs](img/logs.png)
+### memory
+![memory](img/memory.png)
 ---
 
 ## 📦 如何编译与构建 (Build & Package)
