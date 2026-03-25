@@ -1,73 +1,73 @@
 {
   "": {
-    "dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRay.d",
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRay.o",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/master.swiftdeps"
+    "dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRay.d",
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRay.o",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/master.swiftdeps"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/APIClient.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/APIClient.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/APIClient.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/AppDelegate.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/AppDelegate.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/AppDelegate.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/BackendManager.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/BackendManager.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/BackendManager.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/ContentView.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/ContentView.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/ContentView.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/DashboardView.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/DashboardView.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/DashboardView.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/LeoRayApp.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/LeoRayApp.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LeoRayApp.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/LogsView.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/LogsView.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/LogsView.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/MenuBarView.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/MenuBarView.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/MenuBarView.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/Models.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/Models.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/Models.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/NodesView.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/NodesView.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/NodesView.dia"
   },
-  "/Users/leoknox/leoray_副本/LeoRayUI/Sources/LeoRay/PolicyView.swift": {
-    "object": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView.swift.o",
-    "swiftmodule": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView~partial.swiftmodule",
-    "swift-dependencies": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView.swiftdeps",
-    "diagnostics": "/Users/leoknox/leoray_副本/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView.dia"
+  "/Users/leoknox/leoray_副本2/LeoRayUI/Sources/LeoRay/PolicyView.swift": {
+    "object": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView.swift.o",
+    "swiftmodule": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView~partial.swiftmodule",
+    "swift-dependencies": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView.swiftdeps",
+    "diagnostics": "/Users/leoknox/leoray_副本2/LeoRayUI/.build/arm64-apple-macosx/release/LeoRay.build/PolicyView.dia"
   }
 }

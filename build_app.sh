@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-APP_VERSION="1.0.0"
-BUILD_VERSION="1"
+APP_VERSION="1.0.1"
+BUILD_VERSION="1.1"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT="$DIR"
@@ -47,7 +47,9 @@ cp "$PROJECT/data/geoip.dat"             "$RES/core/"
 cp "$PROJECT/data/geosite.dat"           "$RES/core/"
 cp "$PROJECT/data/custom_nodes.json"     "$RES/data/"
 cp "$PROJECT/data/sub"                   "$RES/data/"
-cp "$PROJECT/config/policy.json"         "$RES/config/"
+if [ -f "$PROJECT/config/policy.json" ]; then
+    cp "$PROJECT/config/policy.json"     "$RES/config/"
+fi
 cp "$PROJECT/config/default_policy.md"   "$RES/config/"
 cp "$PROJECT/static/index.html"          "$RES/static/"
 cp "$PROJECT/LeoRayUI/LeoRay.icns"       "$RES/LeoRay.icns"

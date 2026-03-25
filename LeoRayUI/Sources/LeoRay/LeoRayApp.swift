@@ -1,5 +1,13 @@
 import SwiftUI
 
+// Reactive label for MenuBarExtra
+struct MenuBarLabel: View {
+    @ObservedObject var api: APIClient
+    var body: some View {
+        Image(systemName: api.status?.running == true ? "shield.fill" : "shield.slash")
+    }
+}
+
 @main
 struct LeoRayApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -22,8 +30,8 @@ struct LeoRayApp: App {
                 .environmentObject(appDelegate.api)
                 .environmentObject(appDelegate.backend)
         } label: {
-            Image(systemName: appDelegate.api.status?.running == true
-                  ? "shield.fill" : "shield.slash")
+            MenuBarLabel(api: appDelegate.api)
         }
+        .menuBarExtraStyle(.window)
     }
 }
