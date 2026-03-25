@@ -213,11 +213,34 @@ func BuildXrayRulesFromPolicy(p *PolicyConfig, defaultTag string, forceRefresh b
 			fmt.Printf("[Policy] Cannot load rule set [%s]: %v\n", rs.Tag, err)
 			continue
 		}
+
+		var domains []string
+		var ips []string
+		var ports []string
+
 		for _, line := range lines {
 			r := parseListLine(line, tag)
 			if r != nil {
-				rules = append(rules, *r)
+				if len(r.Domain) > 0 {
+					domains = append(domains, r.Domain...)
+				}
+				if len(r.IP) > 0 {
+					ips = append(ips, r.IP...)
+				}
+				if r.Port != "" {
+					ports = append(ports, r.Port)
+				}
 			}
+		}
+
+		if len(domains) > 0 {
+			rules = append(rules, XrayRouteRule{Type: "field", OutboundTag: tag, Domain: domains})
+		}
+		if len(ips) > 0 {
+			rules = append(rules, XrayRouteRule{Type: "field", OutboundTag: tag, IP: ips})
+		}
+		if len(ports) > 0 {
+			rules = append(rules, XrayRouteRule{Type: "field", OutboundTag: tag, Port: strings.Join(ports, ",")})
 		}
 	}
 

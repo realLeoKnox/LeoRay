@@ -110,6 +110,12 @@ class APIClient: ObservableObject {
         try await post("/api/policy/refresh", body: [String: String]())
     }
 
+    func testRoute(target: String, method: String) async throws -> RouteTestResult {
+        let params = ["target": target, "method": method]
+        let data = try JSONEncoder().encode(params)
+        return try await postDataDecoding("/api/test_route", data: data, timeout: 5)
+    }
+
     // MARK: - HTTP Helpers
     private func get<T: Decodable>(_ path: String) async throws -> T {
         let req = URLRequest(url: URL(string: Self.baseURL + path)!, timeoutInterval: 5)

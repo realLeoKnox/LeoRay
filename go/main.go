@@ -132,6 +132,7 @@ func main() {
 	http.HandleFunc("/api/policy/refresh", server.handlePolicyRefresh)
 	http.HandleFunc("/api/start", server.handleStart)
 	http.HandleFunc("/api/stop", server.handleStop)
+	http.HandleFunc("/api/test_route", server.handleTestRoute)
 
 	// Install sudoers for TUN support in background after startup.
 	// Running it here (not in the HTTP handler) prevents osascript from
@@ -1112,4 +1113,167 @@ func setupScopedDefaultRoute(gatewayIP, iface string) {
 	} else {
 		fmt.Printf("[Routing] Scoped default route failed: %v\n", err)
 	}
+}
+
+func (s *APIServer) handleTestRoute(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", 405)
+		return
+	}
+	body, _ := io.ReadAll(r.Body)
+	var req struct {
+		Target string `json:"target"`
+		Method string `json:"method"` // "xray" or "go"
+	}
+	json.Unmarshal(body, &req)
+
+	if req.Target == "" {
+		http.Error(w, "Missing target", 400)
+		return
+	}
+	if req.Method == "" {
+		req.Method = "xray"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "go" {
+		s.Mu.Lock()
+		p := s.Policy
+		defaultNode := s.DefaultNode
+		s.Mu.Unlock()
+		if p == nil {
+			json.NewEncoder(w).Encode(map[string]string{"outbound": "unknown", "rule": "未加载策略"})
+			return
+		}
+		fallbackTag := s.safeTag(resolvePolicy(p.Final, p.Groups, defaultNode))
+		rules := BuildXrayRulesFromPolicy(p, fallbackTag, false)
+		tag, matchedRule := simulateRouteMatch(req.Target, rules, fallbackTag)
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"outbound": s.safeTag(tag),
+			"rule":     matchedRule,
+		})
+		return
+	}
+
+	s.Mu.Lock()
+	running := s.isXrayRunningLocked()
+	s.Mu.Unlock()
+
+	if !running {
+		json.NewEncoder(w).Encode(map[string]string{
+			"outbound": "error",
+			"error":    "使用 Xray 内核测试，请先在 Dashboard 启动核心",
+		})
+		return
+	}
+
+	s.Logs.mu.Lock()
+	startIndex := len(s.Logs.lines)
+	s.Logs.mu.Unlock()
+
+	go func() {
+		conn, err := net.DialTimeout("tcp", "127.0.0.1:1080", 2*time.Second)
+		if err == nil {
+			defer conn.Close()
+			conn.Write([]byte{0x05, 0x01, 0x00})
+			buf := make([]byte, 2)
+			conn.Read(buf)
+			cmd := []byte{0x05, 0x01, 0x00, 0x03, byte(len(req.Target))}
+			cmd = append(cmd, []byte(req.Target)...)
+			cmd = append(cmd, 0x00, 0x50)
+			conn.Write(cmd)
+		}
+	}()
+
+	outbound := "unknown"
+	for i := 0; i < 25; i++ {
+		time.Sleep(100 * time.Millisecond)
+		s.Logs.mu.Lock()
+		var newLines []string
+		if len(s.Logs.lines) > startIndex {
+			newLines = append([]string(nil), s.Logs.lines[startIndex:]...)
+		}
+		s.Logs.mu.Unlock()
+
+		for _, line := range newLines {
+			if strings.Contains(line, "accepted tcp:"+req.Target) || strings.Contains(line, "accepted udp:"+req.Target) {
+				idx := strings.LastIndex(line, " -> ")
+				if idx != -1 {
+					endIdx := strings.Index(line[idx+4:], "]")
+					if endIdx != -1 {
+						outbound = line[idx+4 : idx+4+endIdx]
+						break
+					}
+				}
+			}
+		}
+		if outbound != "unknown" {
+			break
+		}
+	}
+
+	if outbound == "unknown" {
+		json.NewEncoder(w).Encode(map[string]string{
+			"outbound": "timeout",
+			"error":    "请求已发送，但在日志中未命中路由出站记录",
+		})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{
+		"outbound": outbound,
+		"rule":     "Xray 分配 [真实探针日志提取]",
+	})
+}
+
+func simulateRouteMatch(target string, rules []XrayRouteRule, finalTag string) (string, string) {
+	host := target
+	if idx := strings.LastIndex(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+	isIP := net.ParseIP(host) != nil
+
+	for _, rule := range rules {
+		if !isIP && len(rule.Domain) > 0 {
+			for _, d := range rule.Domain {
+				if strings.HasPrefix(d, "full:") {
+					if host == strings.TrimPrefix(d, "full:") {
+						return rule.OutboundTag, d
+					}
+				} else if strings.HasPrefix(d, "domain:") {
+					suffix := strings.TrimPrefix(d, "domain:")
+					if host == suffix || strings.HasSuffix(host, "."+suffix) {
+						return rule.OutboundTag, d
+					}
+				} else if strings.HasPrefix(d, "keyword:") {
+					kw := strings.TrimPrefix(d, "keyword:")
+					if strings.Contains(host, kw) {
+						return rule.OutboundTag, d
+					}
+				} else if strings.HasPrefix(d, "geosite:") {
+					kw := strings.TrimPrefix(d, "geosite:")
+					if strings.Contains(host, kw) {
+						return rule.OutboundTag, d + " [注: Go近似推断]"
+					}
+				}
+			}
+		}
+		if isIP && len(rule.IP) > 0 {
+			for _, ipCidr := range rule.IP {
+				if strings.HasPrefix(ipCidr, "geoip:") {
+					continue
+				}
+				if strings.Contains(ipCidr, "/") {
+					_, ipCidrNet, err := net.ParseCIDR(ipCidr)
+					if err == nil && ipCidrNet.Contains(net.ParseIP(host)) {
+						return rule.OutboundTag, ipCidr
+					}
+				} else if ipCidr == host {
+					return rule.OutboundTag, ipCidr
+				}
+			}
+		}
+	}
+	return finalTag, "默认/兜底规则"
 }

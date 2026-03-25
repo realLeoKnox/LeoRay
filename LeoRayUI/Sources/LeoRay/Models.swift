@@ -85,6 +85,14 @@ struct RuleSet: Codable, Identifiable {
         url     = (try? c.decode(String.self, forKey: .url))     ?? ""
         local   = (try? c.decode(String.self, forKey: .local))   ?? ""
     }
+
+    init(tag: String, policy: String, enabled: Bool, url: String, local: String) {
+        self.tag = tag
+        self.policy = policy
+        self.enabled = enabled
+        self.url = url
+        self.local = local
+    }
 }
 
 // Go: InlineRule { Type, Payload, Policy }
@@ -94,6 +102,12 @@ struct InlineRule: Codable, Identifiable {
     var payload: String
     var policy:  String
     enum CodingKeys: String, CodingKey { case type, payload, policy }
+
+    init(type: String, payload: String, policy: String) {
+        self.type = type
+        self.payload = payload
+        self.policy = policy
+    }
 }
 
 // MARK: - Node Latency
@@ -106,6 +120,12 @@ struct NodeLatency: Codable {
         case connect
         case error
     }
+}
+
+struct RouteTestResult: Codable {
+    var outbound: String
+    var rule: String?
+    var error: String?
 }
 
 // MARK: - API Responses
