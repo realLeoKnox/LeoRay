@@ -1,68 +1,150 @@
 # LeoRay
 
-LeoRay 是一款专为 macOS 设计的现代化 Xray 代理客户端。它原生集成 Swift UI 与强大的 Go 后端（xray_controller），旨在为你提供轻量级、便携且功能强大的极速代理体验。
+<p align="center">
+  <img src="img/LeoRay.png" width="128" alt="LeoRay Icon">
+</p>
 
-## ✨ 特性 (Features)
+LeoRay 是一款专为 macOS 设计的现代化 Xray 代理客户端。原生 SwiftUI 界面 + Go 后端（xray_controller），轻量、便携、功能完整。
 
-- **极致原生界面**：基于 SwiftUI 构建，最低支持 macOS 13+，无缝融入系统体验。无论是系统状态栏的快捷菜单，还是完整的可视化仪表盘，操作响应都极为迅速。
-- **支持全局代理 (TUN Mode)**：完美支持 TUN 驱动，实现真正的系统级全局代理接管。内置高度配置化的 FakeIP DNS 防泄漏与极速的自动路由劫持（避免死循环崩溃）。
-- **真正的便携式封装**：通过脚本一键打包成单独的 `LeoRay.app` 文件。无需繁杂路径与环境配置，所有底层资源（`geoip`、`geosite` 等配置数据包）、引擎组件与配置文件完全内置于 App 的 Resources 中，拷贝走即可运行。
-- **无缝节点与规则管理**：开箱即用的订阅同步与策略分流支持。直观地呈现后台运行状态与日志，快速执行节点测速，并自由在不同出口节点间切换。
-- **一键授权免繁琐 (Sudoers)**：首次发起底层的网卡挂载请求（例如创建本地 TUN 路由表、挂载虚拟网卡）时会完成系统底层的 `sudoers` 安全授权，在此之后畅享顺滑启动，不产生任何恼人的授权弹窗。
+## ✨ 功能特性
+
+### 🎛️ 代理核心
+- **SOCKS5 / HTTP 代理**：双端口监听（1080 / 1081），开箱即用
+- **TUN 全局代理**：基于 utun 设备的透明代理，接管系统全部流量
+- **FakeIP + 流量嗅探**：TLS/HTTP/QUIC 域名嗅探，精准分流
+- **手动控制**：Xray 内核手动启停，不自动运行
+
+### 🌐 智能路由
+- **策略组管理**：自定义策略组（如 Proxy / Streaming / Download），每组绑定不同出口节点
+- **GEO 路由规则**：独立的 GEO 规则系统，基于 `geosite` / `geoip` 数据匹配流量并指向策略组
+- **自定义规则**：支持 DOMAIN / DOMAIN-SUFFIX / DOMAIN-KEYWORD / IP-CIDR / GEOSITE / GEOIP 等类型
+- **远程规则集**：兼容模式支持加载远程 `.list` 规则文件
+- **路由诊断**：内置 Xray 实测探针 + Go 模拟引擎，快速定位流量分配结果
+
+### 🛡️ DNS 防污染
+- **分流 DNS**：直连流量使用国内 DNS（223.5.5.5），代理流量使用境外 DNS（1.1.1.1）
+- **DOH 支持**：直连和代理 DNS 均可配置 DNS-over-HTTPS
+- **TUN / 非 TUN 双模式生效**：即使不开启 TUN，SOCKS 代理模式也能享受 DNS 防污染
+
+### 📡 节点与订阅
+- **多订阅管理**：支持添加、刷新、删除多个订阅源，自动合并去重
+- **节点测速**：
+  - Xray 未运行：直接 TCP ping 到节点服务器（测通断）
+  - Xray 运行中：通过代理发起 HTTPS 请求（测真实端到端延迟含 TLS 握手）
+- **协议支持**：VLESS / VMess / Trojan / Shadowsocks，传输层支持 TCP / WS / gRPC / XHTTP / Reality
+
+### 🖥️ 界面体验
+- **原生 SwiftUI**：macOS 13+ 原生界面，系统状态栏菜单 + 完整仪表盘
+- **一键授权**：首次 TUN 使用时通过 osascript 配置 sudoers，之后无弹窗
+- **便携封装**：`build_app.sh` 一键打包为 `LeoRay.app`，所有资源内置
 
 ---
 
-## 📦 如何编译与构建 (Build & Package)
+## 📸 截图
 
-我们随代码附带了全自动封包构建的 `build_app.sh` 脚本，开发者可以直接将源码从零拉起拼装为 `.app` 可执行包，彻底摆脱笨重的 Xcode！
+| Dashboard | 策略配置 |
+|:---------:|:-------:|
+| ![Dashboard](img/dashboard.png) | ![Policy](img/policy.png) |
+
+| 日志 |
+|:----:|
+| ![Logs](img/logs.png) |
+
+---
+
+## 📦 编译构建
 
 ### 依赖环境
-- **Go** (用于编译后端的 `xray_controller`)
-- **Swift / Xcode Command Line Tools** (使用 `swift build` 命令即可，无需完整的 IDE 开启)
+- **Go 1.21+**（编译后端 xray_controller）
+- **Swift 5.9+ / Xcode CLT**（`swift build`，无需打开 Xcode）
 
-### 一键打包流程
-在你的终端进入项目根目录，运行：
+### 一键打包
 ```bash
 ./build_app.sh
 ```
 
-脚本运行过程中会自动处理以下核心流程：
-1. 编译 Go 版本的本地控制器服务端，保障与 UI 层稳定通信。
-2. 依据 `release` 环境将 Swift UI 编译为高效二进制代码。
-3. 整合编译产物与零散的配置、图标资源文件 `LeoRay.icns`。
-4. 在当前目录下构建并成功生成组装完整的 `LeoRay.app`！
+脚本自动完成：
+1. `go build` 编译 Go 后端控制器
+2. `swift build -c release` 编译 SwiftUI 前端
+3. 拷贝 Xray 内核、GEO 数据、配置文件、图标等资源
+4. 组装生成 `LeoRay.app`
 
-> ℹ️ **需要变更 App 版本号吗？** 
-> 只要在 `build_app.sh` 脚本文件最顶部的 `APP_VERSION` 以及 `BUILD_VERSION` 变量中调整版本号，以后每次打包便会自动渲染新的 `Info.plist` 内核。
+> 💡 版本号在 `build_app.sh` 顶部的 `APP_VERSION` / `BUILD_VERSION` 变量中修改。
 
 ---
 
-## 🚀 首次使用注意事项 (First Run & Gatekeeper)
+## 🚀 首次运行
 
-由于我们通常在个人环境下自行打包（没有配置复杂的苹果开发者强力签名），第一次运行构建好的 `.app` 可能会**被 macOS 的 Gatekeeper 或系统隐私安全机制拦截**（例如弹出“已损坏无法打开”）。
-
-你只需要打开 macOS 终端，在 `LeoRay.app` 上方执行一条隔离属性清理命令：
+由于非 Apple 签名，首次运行可能被 Gatekeeper 拦截。终端执行：
 ```bash
-xattr -cr /路径/前往/LeoRay.app
+xattr -cr /路径/到/LeoRay.app
 ```
-完成后，直接在访达中双击 `LeoRay.app` 即可畅通无阻地启动！
+然后双击启动即可。
 
 ---
 
-## 🧩 目录架构 (Architecture)
+## 🧩 项目结构
 
-- `LeoRayUI/`
-  项目的展示层。所有基于 Swift / SwiftUI 编写的菜单栏状态逻辑与主界面都在这里。
-- `go/`
-  项目的核心调度与控制器（API Server）。负责调用 macOS 路由功能、动态渲染修改底层 Xray 配置热重启等。
-- `core/`
-  包含可执行的 Xray 引擎内核。
-- `data/`
-  静态资料库与应用运行时产生的内部文件。包括你的代理节点信息 `custom_nodes.json` 以及 Xray 路由资产（`geosite.dat`, `geoip.dat`）。
-- `config/`
-  你的分流规则体系的承载者。
-- `build_app.sh`
-  整个专案唯一的灵魂自动化组装执行档。
+```
+LeoRay/
+├── LeoRayUI/              # SwiftUI 前端
+│   └── Sources/LeoRay/
+│       ├── LeoRayApp.swift       # App 入口
+│       ├── ContentView.swift     # 主视图框架
+│       ├── DashboardView.swift   # 仪表盘（状态/启停/日志）
+│       ├── PolicyView.swift      # 策略配置（策略组/GEO/DNS/规则）
+│       ├── NodesView.swift       # 节点管理（订阅/测速）
+│       ├── LogsView.swift        # 日志查看
+│       ├── MenuBarView.swift     # 系统状态栏菜单
+│       ├── Models.swift          # 数据模型
+│       ├── APIClient.swift       # 后端 API 客户端
+│       └── BackendManager.swift  # 后端进程管理
+├── go/                    # Go 后端（API Server）
+│   ├── main.go                   # HTTP 服务 + Xray 管理 + TUN 路由
+│   ├── policy.go                 # 策略系统（组/GEO规则/DNS配置）
+│   ├── node_manager.go           # 节点测速（TCP ping / HTTPS 延迟）
+│   ├── subscription.go           # 多订阅管理
+│   ├── parse_sub.go              # 订阅内容解析
+│   ├── xray_outbound.go          # Xray 出站对象构建
+│   └── clash_to_xray.go          # Clash 规则转换
+├── core/                  # Xray 可执行内核
+├── data/                  # 运行时数据
+│   ├── geoip.dat                 # IP 地理数据库
+│   ├── geosite.dat               # 域名地理数据库
+│   └── custom_nodes.json         # 节点缓存
+├── config/                # 配置文件
+│   └── policy.json               # 策略配置（自动生成）
+├── build_app.sh           # 一键打包脚本
+└── README.md
+```
+
+---
+
+## ⚙️ 策略配置说明
+
+### 策略组
+策略组是一个逻辑分组，绑定一个出口节点。默认 3 个：
+- **Final**：兜底策略（所有未匹配的流量）
+- **Proxy**：代理出口
+- **DIRECT**：直连出口
+
+### GEO 路由规则
+GEO 规则将基于 `geosite`/`geoip` 的流量匹配绑定到策略组：
+- `geosite:google` → Proxy
+- `geosite:cn` → DIRECT
+- `geoip:cn` → DIRECT
+
+> 💡 更多可用的 geosite 规则请参考 [v2fly/domain-list-community](https://github.com/v2fly/domain-list-community/tree/master/data)
+
+### DNS 防污染配置
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| 直连 DNS | `223.5.5.5`, `123.123.123.124` | 用于命中 DIRECT 的流量 |
+| 代理 DNS | `1.1.1.1`, `8.8.8.8` | 用于命中代理策略的流量 |
+| 直连 DOH | 空 | 可选，如 `https://dns.alidns.com/dns-query` |
+| 代理 DOH | 空 | 可选，如 `https://cloudflare-dns.com/dns-query` |
+
+---
 
 # 上面是AI写的，下面我说一说
 ## 免责声明
