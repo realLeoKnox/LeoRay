@@ -4,24 +4,23 @@ import Combine
 class APIClient: ObservableObject {
     static let baseURL = "http://127.0.0.1:3406"
 
-    @Published var status: XrayStatus?
-    @Published var nodes: [OutboundNode] = []
-    @Published var nodeNames: [String] = []
-    @Published var policy: PolicyConfig?
-    @Published var logs: [String] = []
-    @Published var latencies: [Int: NodeLatency] = [:]
+    @Published var status:        XrayStatus?
+    @Published var nodes:         [OutboundNode] = []
+    @Published var nodeNames:     [String] = []
+    @Published var policy:        PolicyConfig?
+    @Published var logs:          [String] = []
+    @Published var latencies:     [Int: NodeLatency] = [:]
+    @Published var subscriptions: [Subscription] = []
     @Published var isConnected = false
 
     private var statusTimer: Timer?
-    private var logTimer: Timer?
+    private var logTimer:    Timer?
 
     // MARK: - Polling
     func startPolling() {
-        // Status: every 1s for responsive UI
         statusTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.refreshStatus()
         }
-        // Logs: every 2s (less urgent)
         logTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             self?.refreshLogs()
         }
@@ -31,7 +30,7 @@ class APIClient: ObservableObject {
 
     func stopPolling() {
         statusTimer?.invalidate(); statusTimer = nil
-        logTimer?.invalidate();    logTimer = nil
+        logTimer?.invalidate();    logTimer    = nil
     }
 
     private func refreshStatus() {
@@ -46,13 +45,19 @@ class APIClient: ObservableObject {
         }
     }
 
-    // MARK: - API Calls (all run on cooperative thread pool, publish on MainActor)
+    // MARK: - Status / Logs
     func fetchStatus() async throws -> XrayStatus {
         let v: XrayStatus = try await get("/api/status")
         await MainActor.run { status = v; isConnected = true }
         return v
     }
 
+    func fetchLogs() async throws -> [String] {
+        let resp: LogsResponse = try await get("/api/logs")
+        return resp.logs
+    }
+
+    // MARK: - Nodes
     func fetchNodes() async throws {
         let v: [OutboundNode] = try await get("/api/nodes")
         await MainActor.run { nodes = v }
@@ -63,16 +68,46 @@ class APIClient: ObservableObject {
         await MainActor.run { nodeNames = resp.nodes }
     }
 
+    // MARK: - Policy
     func fetchPolicy() async throws {
         let v: PolicyConfig = try await get("/api/policy")
         await MainActor.run { policy = v }
     }
 
-    func fetchLogs() async throws -> [String] {
-        let resp: LogsResponse = try await get("/api/logs")
-        return resp.logs
+    func savePolicy(_ p: PolicyConfig) async throws {
+        let data = try JSONEncoder().encode(p)
+        try await postData("/api/policy", data: data)
+        await MainActor.run { policy = p }
     }
 
+    func refreshRules() async throws {
+        try await post("/api/policy/refresh", body: [String: String]())
+    }
+
+    // MARK: - Proxy Control
+    func startProxy() async throws {
+        try await post("/api/start", body: [String: String]())
+    }
+
+    func stopProxy() async throws {
+        try await post("/api/stop", body: [String: String]())
+    }
+
+    // MARK: - Node Testing
+    func testNode(index: Int) async throws -> NodeLatency {
+        let data = try JSONEncoder().encode(["index": index])
+        let resp: NodeLatency = try await postDataDecoding("/api/test_node", data: data, timeout: 15)
+        await MainActor.run { latencies[index] = resp }
+        return resp
+    }
+
+    func testRoute(target: String, method: String) async throws -> RouteTestResult {
+        let params = ["target": target, "method": method]
+        let data   = try JSONEncoder().encode(params)
+        return try await postDataDecoding("/api/test_route", data: data, timeout: 5)
+    }
+
+    // MARK: - Legacy Subscription Import (raw URL / content paste)
     func importSubscription(url urlStr: String) async throws {
         try await post("/api/sub", body: ["url": urlStr])
         try await fetchNodes()
@@ -85,35 +120,53 @@ class APIClient: ObservableObject {
         try await fetchNodeNames()
     }
 
-    func savePolicy(_ p: PolicyConfig) async throws {
-        let data = try JSONEncoder().encode(p)
-        try await postData("/api/policy", data: data)
-        await MainActor.run { policy = p }
+    // MARK: - Subscription Management (new multi-sub system)
+
+    /// Load all saved subscriptions from backend.
+    func fetchSubscriptions() async throws {
+        let v: [Subscription] = try await get("/api/subscriptions")
+        await MainActor.run { subscriptions = v }
     }
 
-    func testNode(index: Int) async throws -> NodeLatency {
-        let data = try JSONEncoder().encode(["index": index])
-        let resp: NodeLatency = try await postDataDecoding("/api/test_node", data: data, timeout: 15)
-        await MainActor.run { latencies[index] = resp }
-        return resp
+    /// Add a new named subscription and refresh node list.
+    func addSubscription(name: String, url: String) async throws -> Subscription {
+        struct Req: Encodable { let action, name, url: String }
+        let data = try JSONEncoder().encode(Req(action: "add", name: name, url: url))
+        let sub: Subscription = try await postDataDecoding("/api/subscriptions", data: data, timeout: 30)
+        try? await fetchNodes()
+        try? await fetchNodeNames()
+        try await fetchSubscriptions()
+        return sub
     }
 
-    func startProxy() async throws {
-        try await post("/api/start", body: [String: String]())
+    /// Re-fetch a single subscription's nodes.
+    func refreshSubscription(id: String) async throws {
+        struct Req: Encodable { let action, id: String }
+        let data = try JSONEncoder().encode(Req(action: "refresh", id: id))
+        try await postData("/api/subscriptions", data: data)
+        try await fetchSubscriptions()
+        try? await fetchNodes()
+        try? await fetchNodeNames()
     }
 
-    func stopProxy() async throws {
-        try await post("/api/stop", body: [String: String]())
+    /// Re-fetch ALL subscriptions' nodes.
+    func refreshAllSubscriptions() async throws {
+        struct Req: Encodable { let action: String }
+        let data = try JSONEncoder().encode(Req(action: "refresh_all"))
+        try await postData("/api/subscriptions", data: data)
+        try await fetchSubscriptions()
+        try? await fetchNodes()
+        try? await fetchNodeNames()
     }
 
-    func refreshRules() async throws {
-        try await post("/api/policy/refresh", body: [String: String]())
-    }
-
-    func testRoute(target: String, method: String) async throws -> RouteTestResult {
-        let params = ["target": target, "method": method]
-        let data = try JSONEncoder().encode(params)
-        return try await postDataDecoding("/api/test_route", data: data, timeout: 5)
+    /// Delete a subscription and its cached nodes.
+    func deleteSubscription(id: String) async throws {
+        struct Req: Encodable { let action, id: String }
+        let data = try JSONEncoder().encode(Req(action: "delete", id: id))
+        try await postData("/api/subscriptions", data: data)
+        try await fetchSubscriptions()
+        try? await fetchNodes()
+        try? await fetchNodeNames()
     }
 
     // MARK: - HTTP Helpers
@@ -147,4 +200,5 @@ class APIClient: ObservableObject {
         let (respData, _) = try await URLSession.shared.data(for: req)
         return try JSONDecoder().decode(T.self, from: respData)
     }
+
 }

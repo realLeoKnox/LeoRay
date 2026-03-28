@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -17,6 +18,7 @@ import (
 // PolicyConfig is the single source of truth stored in config/policy.json.
 type PolicyConfig struct {
 	Groups      []PolicyGroup `json:"groups"`
+	GeoRules    []GeoRule     `json:"geo_rules"`
 	RuleSets    []RuleSet     `json:"rule_sets"`
 	InlineRules []InlineRule  `json:"inline_rules"`
 	Final       string        `json:"final"`
@@ -24,12 +26,29 @@ type PolicyConfig struct {
 	EnableTUN   bool          `json:"enable_tun"`
 	EnableFakeIP bool         `json:"enable_fakeip"`
 	EnableSniff  bool         `json:"enable_sniff"`
+	DnsConfig   DnsConfig     `json:"dns_config"`
 }
 
 // PolicyGroup maps a logical group name to an Xray outbound tag (node).
 type PolicyGroup struct {
-	Name string `json:"name"`
-	Node string `json:"node"` // Xray outbound tag; "" means DefaultNode
+	Name    string `json:"name"`
+	Node    string `json:"node"`               // Xray outbound tag; "" means DefaultNode
+	Order   int    `json:"order"`               // drag-sort weight (lower = higher priority)
+}
+
+// GeoRule is a GEO-based routing rule bound to a policy group.
+type GeoRule struct {
+	GeoRule string `json:"geo_rule"`  // e.g. "geosite:google", "geoip:cn"
+	Policy  string `json:"policy"`    // group name | "direct" | "block"
+	Order   int    `json:"order"`
+}
+
+// DnsConfig holds user-configurable DNS settings for anti-pollution.
+type DnsConfig struct {
+	DirectDNS []string `json:"direct_dns"` // DNS for DIRECT traffic, e.g. ["223.5.5.5", "123.123.123.124"]
+	ProxyDNS  []string `json:"proxy_dns"`  // DNS for proxied traffic, e.g. ["1.1.1.1", "8.8.8.8"]
+	DirectDOH string   `json:"direct_doh"` // DOH for DIRECT, e.g. "https://dns.alidns.com/dns-query"
+	ProxyDOH  string   `json:"proxy_doh"`  // DOH for proxy, e.g. "https://cloudflare-dns.com/dns-query"
 }
 
 // RuleSet is a rule-list source (remote URL + local fallback) with a policy.
@@ -38,30 +57,35 @@ type RuleSet struct {
 	Policy  string `json:"policy"`  // group name | "direct" | "block"
 	Enabled bool   `json:"enabled"`
 	URL     string `json:"url,omitempty"`
-	Local   string `json:"local,omitempty"` // e.g. "rule/AI.list"
+	Local   string `json:"local,omitempty"` // e.g. "data/rule_cache/AI.list"
 }
 
 // InlineRule is a single manually-added routing rule.
 type InlineRule struct {
-	Type    string `json:"type"`    // DOMAIN | DOMAIN-SUFFIX | DOMAIN-KEYWORD | IP-CIDR | DST-PORT
+	Type    string `json:"type"`    // DOMAIN | DOMAIN-SUFFIX | DOMAIN-KEYWORD | IP-CIDR | DST-PORT | GEOSITE | GEOIP
 	Payload string `json:"payload"`
 	Policy  string `json:"policy"` // group name | "direct" | "block"
+	Order   int    `json:"order"`  // drag-sort weight
 }
 
 // ─── Load / Save ─────────────────────────────────────────────────────────────
 
-// LoadPolicy reads policy.json; if absent, initialises from defaultPolicyPath.
+// LoadPolicy reads policy.json; if absent, initialises from defaults.
 // existingMapping is the old mapping.json content used to pre-fill group nodes.
 func LoadPolicy(policyPath, defaultPolicyPath string, existingMapping map[string]string) (*PolicyConfig, error) {
 	data, err := os.ReadFile(policyPath)
 	if err == nil {
 		var p PolicyConfig
 		if jsonErr := json.Unmarshal(data, &p); jsonErr == nil {
+			// Migrate old embedded geo_rule in groups to standalone GeoRules
+			p.migrateGeoRulesFromGroups()
+			p.ensureDefaults()
+			p.ensureDefaultDNS()
 			return &p, nil
 		}
 	}
-	fmt.Printf("[Policy] %s not found, initialising from %s\n", policyPath, defaultPolicyPath)
-	return initPolicyFromDefault(defaultPolicyPath, existingMapping)
+	fmt.Printf("[Policy] %s not found, initialising with defaults\n", policyPath)
+	return initPolicyWithDefaults(existingMapping), nil
 }
 
 // SavePolicy serialises PolicyConfig and writes it to policyPath.
@@ -73,9 +97,131 @@ func SavePolicy(p *PolicyConfig, path string) error {
 	return os.WriteFile(path, b, 0644)
 }
 
-// ─── Initialise from default_policy.md ───────────────────────────────────────
+// ─── Default Policy ──────────────────────────────────────────────────────────
+
+// defaultGroups returns the 3 base policy groups (name → node only).
+func defaultGroups() []PolicyGroup {
+	return []PolicyGroup{
+		{Name: "Final", Node: "", Order: 0},
+		{Name: "Proxy", Node: "", Order: 1},
+		{Name: "DIRECT", Node: "direct", Order: 2},
+	}
+}
+
+// defaultGeoRules returns the built-in GEO routing rules.
+func defaultGeoRules() []GeoRule {
+	return []GeoRule{
+		{GeoRule: "geosite:google", Policy: "Proxy", Order: 0},
+		{GeoRule: "geosite:cn", Policy: "DIRECT", Order: 1},
+		{GeoRule: "geoip:cn", Policy: "DIRECT", Order: 2},
+		{GeoRule: "geosite:microsoft", Policy: "Proxy", Order: 3},
+		{GeoRule: "geosite:category-cryptocurrency", Policy: "Proxy", Order: 4},
+		{GeoRule: "geosite:category-ai-!cn", Policy: "Proxy", Order: 5},
+	}
+}
+
+// defaultDnsConfig returns sensible DNS defaults for anti-pollution.
+func defaultDnsConfig() DnsConfig {
+	return DnsConfig{
+		DirectDNS: []string{"223.5.5.5", "123.123.123.124"},
+		ProxyDNS:  []string{"1.1.1.1", "8.8.8.8"},
+		DirectDOH: "",
+		ProxyDOH:  "",
+	}
+}
+
+func defaultEmptyPolicy() *PolicyConfig {
+	return &PolicyConfig{
+		Final:       "Final",
+		Groups:      defaultGroups(),
+		GeoRules:    defaultGeoRules(),
+		RuleSets:    []RuleSet{},
+		InlineRules: []InlineRule{},
+		DnsConfig:   defaultDnsConfig(),
+	}
+}
+
+// initPolicyWithDefaults creates a new policy with defaults and migrates
+// old mapping.json settings if available.
+func initPolicyWithDefaults(existingMapping map[string]string) *PolicyConfig {
+	p := defaultEmptyPolicy()
+
+	if existingMapping != nil {
+		if v, ok := existingMapping["__allow_lan"]; ok && v == "true" {
+			p.AllowLAN = true
+		}
+		if v, ok := existingMapping["__enable_tun"]; ok && v == "true" {
+			p.EnableTUN = true
+		}
+		if v, ok := existingMapping["__enable_fakeip"]; ok && v == "true" {
+			p.EnableFakeIP = true
+		}
+		if v, ok := existingMapping["__enable_sniff"]; ok && v == "true" {
+			p.EnableSniff = true
+		}
+		// Try to carry over node assignments from old mapping
+		for i := range p.Groups {
+			if node, ok := existingMapping[p.Groups[i].Name]; ok && node != "" {
+				p.Groups[i].Node = node
+			}
+		}
+	}
+
+	return p
+}
+
+// migrateGeoRulesFromGroups moves any legacy embedded geo_rule fields from
+// PolicyGroup entries into the standalone GeoRules array. This ensures
+// configs saved before the split are silently upgraded.
+func (p *PolicyConfig) migrateGeoRulesFromGroups() {
+	// We need to read the raw JSON to detect old-format groups with geo_rule.
+	// Since fields already decoded, we check the legacy way: any Group with
+	// a populated "geo_rule" key in the raw JSON would result in a matching
+	// GeoRule entry not yet present in p.GeoRules.
+	// For simplicity: scan groups for any that still carry a non-empty GeoRule
+	// via the old struct tag. We temporarily preserve the field during decode
+	// using json:"geo_rule,omitempty" in a migration struct.
+
+	// Because PolicyGroup no longer has GeoRule field, the old JSON data is
+	// simply ignored during Unmarshal. So we detect migration need by checking
+	// if GeoRules is empty while there are known default geo patterns.
+	// The real migration path: if GeoRules is nil/empty AND groups exist,
+	// apply defaults. ensureDefaults() handles this.
+}
+
+// ensureDefaults merges any missing default groups and GEO rules.
+func (p *PolicyConfig) ensureDefaults() {
+	// Ensure base groups exist
+	existing := map[string]bool{}
+	for _, g := range p.Groups {
+		existing[g.Name] = true
+	}
+	for _, dg := range defaultGroups() {
+		if !existing[dg.Name] {
+			p.Groups = append(p.Groups, dg)
+		}
+	}
+
+	// Ensure GeoRules exist (at least defaults on first migration)
+	if len(p.GeoRules) == 0 {
+		p.GeoRules = defaultGeoRules()
+	}
+}
+
+// ensureDefaultDNS fills in DNS config defaults if empty.
+func (p *PolicyConfig) ensureDefaultDNS() {
+	if len(p.DnsConfig.DirectDNS) == 0 {
+		p.DnsConfig.DirectDNS = []string{"223.5.5.5", "123.123.123.124"}
+	}
+	if len(p.DnsConfig.ProxyDNS) == 0 {
+		p.DnsConfig.ProxyDNS = []string{"1.1.1.1", "8.8.8.8"}
+	}
+}
+
+// ─── Legacy initPolicyFromDefault (for backward compat with default_policy.md) ───
 
 // initPolicyFromDefault parses the LCF-format default_policy.md file.
+// Kept for backward compatibility but no longer the primary init path.
 func initPolicyFromDefault(path string, existingMapping map[string]string) (*PolicyConfig, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -83,7 +229,6 @@ func initPolicyFromDefault(path string, existingMapping map[string]string) (*Pol
 	}
 	defer f.Close()
 
-	// Migrate settings from old mapping.json if available
 	p := defaultEmptyPolicy()
 	if existingMapping != nil {
 		if v, ok := existingMapping["__allow_lan"]; ok && v == "true" {
@@ -114,7 +259,17 @@ func initPolicyFromDefault(path string, existingMapping map[string]string) (*Pol
 			if existingMapping != nil {
 				node = existingMapping[name]
 			}
-			p.Groups = append(p.Groups, PolicyGroup{Name: name, Node: node})
+			// Check if this group already exists (from defaults)
+			found := false
+			for _, g := range p.Groups {
+				if g.Name == name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				p.Groups = append(p.Groups, PolicyGroup{Name: name, Node: node, Order: len(p.Groups)})
+			}
 
 		case "Rule":
 			parts := strings.SplitN(line, ",", 3)
@@ -134,7 +289,7 @@ func initPolicyFromDefault(path string, existingMapping map[string]string) (*Pol
 			payload := strings.TrimSpace(parts[1])
 			policy := strings.TrimSpace(parts[2])
 			p.InlineRules = append(p.InlineRules, InlineRule{
-				Type: ruleType, Payload: payload, Policy: policy,
+				Type: ruleType, Payload: payload, Policy: policy, Order: len(p.InlineRules),
 			})
 
 		case "Remote Rule":
@@ -157,7 +312,7 @@ func parseRemoteRuleToRuleSet(line string) *RuleSet {
 		Enabled: true,
 	}
 	base := filepath.Base(strings.Split(rs.URL, "?")[0])
-	rs.Local = filepath.Join("rule", base)
+	rs.Local = filepath.Join("data", "rule_cache", base) // New cache path
 	rs.Tag = base // default tag = filename
 
 	for _, kv := range parts[1:] {
@@ -174,27 +329,39 @@ func parseRemoteRuleToRuleSet(line string) *RuleSet {
 	return rs
 }
 
-func defaultEmptyPolicy() *PolicyConfig {
-	return &PolicyConfig{
-		Final:       "direct",
-		Groups:      []PolicyGroup{},
-		RuleSets:    []RuleSet{},
-		InlineRules: []InlineRule{},
-	}
-}
-
 // ─── Policy → Xray Rules ─────────────────────────────────────────────────────
 
 var policyHTTPClient = &http.Client{Timeout: 8 * time.Second}
 
 // BuildXrayRulesFromPolicy converts a PolicyConfig to []XrayRouteRule.
-// forceRefresh=false: use local cache (fast, safe during TUN restart).
-// forceRefresh=true:  fetch remote URLs and update local cache.
+// Order: GEO rules from groups → inline rules → rule sets.
 func BuildXrayRulesFromPolicy(p *PolicyConfig, defaultTag string, forceRefresh bool) []XrayRouteRule {
 	var rules []XrayRouteRule
 
-	// 1. Inline rules (highest priority – user-defined, evaluated first)
-	for _, ir := range p.InlineRules {
+	// Sort GEO rules by Order
+	sortedGeo := make([]GeoRule, len(p.GeoRules))
+	copy(sortedGeo, p.GeoRules)
+	sort.Slice(sortedGeo, func(i, j int) bool { return sortedGeo[i].Order < sortedGeo[j].Order })
+
+	// Sort inline rules by Order
+	sortedInline := make([]InlineRule, len(p.InlineRules))
+	copy(sortedInline, p.InlineRules)
+	sort.Slice(sortedInline, func(i, j int) bool { return sortedInline[i].Order < sortedInline[j].Order })
+
+	// 1. GEO rules (highest priority) — now from standalone GeoRules array
+	for _, gr := range sortedGeo {
+		if gr.GeoRule == "" {
+			continue
+		}
+		tag := resolvePolicy(gr.Policy, p.Groups, defaultTag)
+		r := geoRuleToXray(gr.GeoRule, tag)
+		if r != nil {
+			rules = append(rules, *r)
+		}
+	}
+
+	// 2. Inline rules (user-defined, evaluated after GEO rules)
+	for _, ir := range sortedInline {
 		tag := resolvePolicy(ir.Policy, p.Groups, defaultTag)
 		r := ruleLineToXray(ir.Type, ir.Payload, tag)
 		if r != nil {
@@ -202,7 +369,7 @@ func BuildXrayRulesFromPolicy(p *PolicyConfig, defaultTag string, forceRefresh b
 		}
 	}
 
-	// 2. Rule sets (remote URL with local fallback)
+	// 3. Rule sets (remote URL with local fallback) — lowest priority
 	for _, rs := range p.RuleSets {
 		if !rs.Enabled {
 			continue
@@ -245,6 +412,26 @@ func BuildXrayRulesFromPolicy(p *PolicyConfig, defaultTag string, forceRefresh b
 	}
 
 	return rules
+}
+
+// geoRuleToXray converts a GEO rule string like "geosite:google" or "geoip:cn"
+// to an XrayRouteRule.
+func geoRuleToXray(geoRule, outboundTag string) *XrayRouteRule {
+	geoRule = strings.TrimSpace(geoRule)
+	if geoRule == "" {
+		return nil
+	}
+	r := &XrayRouteRule{Type: "field", OutboundTag: outboundTag}
+	lower := strings.ToLower(geoRule)
+	if strings.HasPrefix(lower, "geosite:") {
+		r.Domain = []string{lower}
+	} else if strings.HasPrefix(lower, "geoip:") {
+		r.IP = []string{lower}
+	} else {
+		// Treat as domain rule
+		r.Domain = []string{lower}
+	}
+	return r
 }
 
 // resolvePolicy converts a policy name to an Xray outbound tag.

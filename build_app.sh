@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-APP_VERSION="1.0.2"
-BUILD_VERSION="1.2"
+APP_VERSION="1.0.3"
+BUILD_VERSION="1.3"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT="$DIR"

@@ -133,6 +133,7 @@ func main() {
 	http.HandleFunc("/api/start", server.handleStart)
 	http.HandleFunc("/api/stop", server.handleStop)
 	http.HandleFunc("/api/test_route", server.handleTestRoute)
+	http.HandleFunc("/api/subscriptions", server.handleSubscriptions)
 
 	// Install sudoers for TUN support in background after startup.
 	// Running it here (not in the HTTP handler) prevents osascript from
@@ -156,13 +157,21 @@ func main() {
 func (s *APIServer) reloadDiskDataLocked() {
 	s.Nodes = []string{}
 
-	// 1. Load outbound nodes
+	// 1. Load outbound nodes — try multiple sources in priority order:
+	//    a) custom_nodes.json (user-edited)
+	//    b) Merge from saved subscriptions
+	//    c) Legacy data/sub file
 	var outbounds []*OutboundObject
 	customBytes, err := os.ReadFile(pathCustomNodes)
 	if err == nil {
 		json.Unmarshal(customBytes, &outbounds)
 	}
 	if len(outbounds) == 0 {
+		// Try merging from subscription system
+		outbounds = MergeAllSubscriptionNodes()
+	}
+	if len(outbounds) == 0 {
+		// Legacy fallback: parse data/sub raw file
 		outbounds, err = ParseSub(pathSub)
 		if err == nil && len(outbounds) > 0 {
 			b, _ := json.MarshalIndent(outbounds, "", "  ")
@@ -428,42 +437,78 @@ func (s *APIServer) applyConfigAndRestartLocked() {
 		}
 	}
 
-	// ── DNS + FakeIP ──────────────────────────────────────────────────────────────
+	// ── DNS Anti-Pollution + FakeIP ──────────────────────────────────────────────
+	// Build split DNS: DirectDNS for CN/direct traffic, ProxyDNS for proxied traffic.
+	// Enabled for BOTH TUN and non-TUN modes to combat DNS pollution.
+	dc := p.DnsConfig
+	if len(dc.DirectDNS) == 0 {
+		dc.DirectDNS = []string{"223.5.5.5", "123.123.123.124"}
+	}
+	if len(dc.ProxyDNS) == 0 {
+		dc.ProxyDNS = []string{"1.1.1.1", "8.8.8.8"}
+	}
+
+	// Determine the primary direct DNS address (for proxy hostname resolution, FakeIP bypass, etc.)
+	primaryDirectDNS := dc.DirectDNS[0]
+	if dc.DirectDOH != "" {
+		primaryDirectDNS = dc.DirectDOH
+	}
+
 	var dnsConfig map[string]interface{}
-	if p.EnableTUN {
+	{
 		dnsServers := []interface{}{}
-		if p.EnableFakeIP {
+
+		if p.EnableFakeIP && p.EnableTUN {
 			// ── Critical FakeIP fix ────────────────────────────────────────────────
-			// When FakeIP is enabled, fakedns intercepts ALL domain lookups —
-			// including Xray's own DNS resolution for proxy server addresses.
-			// This causes Xray to dial fake IPs (198.18.x.x) for its own outbound
-			// connections → "network is unreachable".
-			//
-			// Fix: insert a real-DNS rule for proxy server hostnames BEFORE fakedns
+			// Insert a real-DNS rule for proxy server hostnames BEFORE fakedns
 			// so they always resolve to real IPs, never fake ones.
 			proxyHostnames := extractProxyHostnames(s.Outbounds)
 			if len(proxyHostnames) > 0 {
 				dnsServers = append(dnsServers, map[string]interface{}{
-					"address": "223.5.5.5",
+					"address": primaryDirectDNS,
 					"domains": proxyHostnames,
 				})
 			}
 			dnsServers = append(dnsServers, "fakedns")
 		}
-		dnsServers = append(dnsServers, "223.5.5.5", "114.114.114.114")
+
+		// Proxy DNS: for non-CN domains (resolved via proxy to avoid pollution)
+		proxyDNSAddr := dc.ProxyDNS[0]
+		if dc.ProxyDOH != "" {
+			proxyDNSAddr = dc.ProxyDOH
+		}
+		dnsServers = append(dnsServers, map[string]interface{}{
+			"address": proxyDNSAddr,
+			"domains": []string{"geosite:geolocation-!cn"},
+		})
+
+		// Direct DNS: for CN domains + fallback
+		directDNSAddr := dc.DirectDNS[0]
+		if dc.DirectDOH != "" {
+			directDNSAddr = dc.DirectDOH
+		}
+		dnsServers = append(dnsServers, map[string]interface{}{
+			"address": directDNSAddr,
+			"domains": []string{"geosite:cn"},
+		})
+		// Add remaining direct DNS as plain fallback
+		for _, dns := range dc.DirectDNS {
+			dnsServers = append(dnsServers, dns)
+		}
 
 		dnsConfig = map[string]interface{}{
 			"servers":       dnsServers,
 			"queryStrategy": "UseIP",
 		}
-		if p.EnableFakeIP {
+		if p.EnableFakeIP && p.EnableTUN {
 			dnsConfig["fakedns"] = []map[string]interface{}{
 				{"ipPool": "198.18.0.0/15", "poolSize": 65535},
 			}
 		}
+	}
 
+	if p.EnableTUN {
 		// dns-out: bind to physical NIC so Xray's own DNS queries bypass TUN.
-		// Without this binding, dns-out queries re-enter TUN → dns-out loop.
 		dnsOutbound := map[string]interface{}{
 			"tag": "dns-out", "protocol": "dns",
 		}
@@ -478,13 +523,22 @@ func (s *APIServer) applyConfigAndRestartLocked() {
 	// ── Routing rules ────────────────────────────────────────────────────────
 	xrayRules := BuildXrayRulesFromPolicy(p, s.DefaultNode, false)
 
+	// Collect all DNS IPs that need direct bypass routing
+	var dnsIPs []string
+	for _, ip := range dc.DirectDNS {
+		dnsIPs = append(dnsIPs, ip)
+	}
+	for _, ip := range dc.ProxyDNS {
+		dnsIPs = append(dnsIPs, ip)
+	}
+
 	// TUN pre-pend: LAN bypass + DNS intercept
 	if p.EnableTUN {
 		xrayRules = append([]XrayRouteRule{
 			{Type: "field", IP: []string{"127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12", "fc00::/7", "fe80::/10"}, OutboundTag: "direct-local"},
 			{Type: "field", Domain: []string{"localhost"}, OutboundTag: "direct-local"},
 			{Type: "field", InboundTag: []string{"tun-in", "socks-in"}, Port: "53", Network: "tcp,udp", OutboundTag: "dns-out"},
-			{Type: "field", IP: []string{"223.5.5.5", "114.114.114.114"}, OutboundTag: "direct"},
+			{Type: "field", IP: dnsIPs, OutboundTag: "direct"},
 		}, xrayRules...)
 	}
 
@@ -762,7 +816,115 @@ func (s *APIServer) handleSub(w http.ResponseWriter, r *http.Request) {
 	} else {
 		s.reloadDiskData()
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// handleSubscriptions: GET returns subscription list, POST adds/refreshes/deletes.
+func (s *APIServer) handleSubscriptions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case http.MethodGet:
+		subs, _ := LoadSubscriptions()
+		json.NewEncoder(w).Encode(subs)
+
+	case http.MethodPost:
+		body, _ := io.ReadAll(r.Body)
+		var req struct {
+			Action string `json:"action"` // "add", "refresh", "refresh_all", "delete"
+			ID     string `json:"id,omitempty"`
+			Name   string `json:"name,omitempty"`
+			URL    string `json:"url,omitempty"`
+		}
+		json.Unmarshal(body, &req)
+
+		switch req.Action {
+		case "add":
+			if req.URL == "" {
+				http.Error(w, "URL required", 400)
+				return
+			}
+			name := req.Name
+			if name == "" {
+				name = "订阅 " + time.Now().Format("01-02 15:04")
+			}
+			sub, _, err := AddSubscription(name, req.URL)
+			if err != nil {
+				http.Error(w, "Add failed: "+err.Error(), 500)
+				return
+			}
+			// Rebuild merged node list
+			allNodes := MergeAllSubscriptionNodes()
+			if len(allNodes) > 0 {
+				nb, _ := json.MarshalIndent(allNodes, "", "  ")
+				os.WriteFile(pathCustomNodes, nb, 0644)
+			}
+			s.reloadDiskData()
+			json.NewEncoder(w).Encode(sub)
+
+		case "refresh":
+			if req.ID == "" {
+				http.Error(w, "ID required", 400)
+				return
+			}
+			_, err := RefreshSubscription(req.ID)
+			if err != nil {
+				http.Error(w, "Refresh failed: "+err.Error(), 500)
+				return
+			}
+			allNodes := MergeAllSubscriptionNodes()
+			if len(allNodes) > 0 {
+				nb, _ := json.MarshalIndent(allNodes, "", "  ")
+				os.WriteFile(pathCustomNodes, nb, 0644)
+			}
+			s.Mu.Lock()
+			running := s.isXrayRunningLocked()
+			s.Mu.Unlock()
+			if running {
+				s.reloadAndRestart()
+			} else {
+				s.reloadDiskData()
+			}
+			w.Write([]byte(`{"status":"ok"}`))
+
+		case "refresh_all":
+			_, err := RefreshAllSubscriptions()
+			if err != nil {
+				http.Error(w, "Refresh all failed: "+err.Error(), 500)
+				return
+			}
+			allNodes := MergeAllSubscriptionNodes()
+			if len(allNodes) > 0 {
+				nb, _ := json.MarshalIndent(allNodes, "", "  ")
+				os.WriteFile(pathCustomNodes, nb, 0644)
+			}
+			s.Mu.Lock()
+			running := s.isXrayRunningLocked()
+			s.Mu.Unlock()
+			if running {
+				s.reloadAndRestart()
+			} else {
+				s.reloadDiskData()
+			}
+			w.Write([]byte(`{"status":"ok"}`))
+
+		case "delete":
+			if req.ID == "" {
+				http.Error(w, "ID required", 400)
+				return
+			}
+			DeleteSubscription(req.ID)
+			allNodes := MergeAllSubscriptionNodes()
+			nb, _ := json.MarshalIndent(allNodes, "", "  ")
+			os.WriteFile(pathCustomNodes, nb, 0644)
+			s.reloadDiskData()
+			w.Write([]byte(`{"status":"ok"}`))
+
+		default:
+			http.Error(w, "Unknown action", 400)
+		}
+	}
 }
 
 func (s *APIServer) handleNodes(w http.ResponseWriter, r *http.Request) {
@@ -809,14 +971,10 @@ func (s *APIServer) handleTestNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	targetOb := s.Outbounds[req.Index]
-	// Read physical interface under lock so we get a consistent view
-	activeIf := ""
-	if s.Policy != nil && s.Policy.EnableTUN {
-		activeIf = getDefaultInterface()
-	}
+	running := s.isXrayRunningLocked()
 	s.Mu.Unlock()
 
-	tcpPing, connectPing, err := testNodeLatency(targetOb, activeIf)
+	tcpPing, connectPing, err := testNodeLatency(targetOb, running)
 	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error(), "tcp_ping": tcpPing, "connect": connectPing})
